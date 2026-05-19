@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 依存関係のクリーンインストール
-RUN npm ci
+RUN npm install
 
 # コードのコピーと権限付与
 COPY . .
