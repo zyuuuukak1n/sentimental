@@ -3,11 +3,33 @@
 @tailwind components;
 @tailwind utilities;
 
-/* * ▼ モダンでソフトな明るいデザインのベース設定
- * 真っ白（#FFFFFF）や真っ黒（#000000）はコントラストが強すぎて目が疲れるため、
- * 少しだけグレーやブラウンを混ぜた色を使うのがモダンデザインの鉄則
- */
 body {
-    background-color: #F9FAFB;  /* ほんのり温かいオフホワイト */
-    color: #374151; /* 真っ黒ではなく、柔らかいダークグレー */
+  background-color: #F9FAFB; 
+  color: #374151;
+  /* ▼追記: 絵文字が画面外に飛んでいった時に、不要なスクロールバーが出ないようにする */
+  overflow: hidden; 
+}
+
+/* ----------------------------------------------------------------------
+ * ▼ 追加：絵文字が下から上へフワッと消えるアニメーション定義
+ * ---------------------------------------------------------------------- */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    /* 500px上へ移動し、1.5倍に拡大しながら、透明になる */
+    transform: translateY(-500px) scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* このクラスをHTMLタグに付けるとアニメーションが発動します */
+.animate-float {
+  animation: floatUp 2.5s ease-out forwards;
+  position: absolute;
+  /* pointer-events: none; は超重要。
+     浮いている絵文字が下のボタンのクリック判定を邪魔しないようにする設定です */
+  pointer-events: none; 
 }
