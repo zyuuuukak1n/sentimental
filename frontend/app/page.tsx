@@ -76,36 +76,69 @@ export default function Home() {
     // ▼ 画面の描画（HTML/CSS）
     // ---------------------------------------------------------
     return (
-        <main style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a1a', color: 'white'}}>
-            <h1>リアルタイム通信テスト</h1>
+        /* * tailwindの解説
+         * min-h-screen: 画面の高さを最低でも100%確保
+         * flex flex-col items-center justify-center: 盾並びでど真ん中に配置
+         * font-sans: モダンなゴシック体を使用
+         */
+        <main className="min-h-screen flex flex-col items-center justify-center font-sans p-4">
+            
+            <h1 className="text-2xl font-bold mb-12 text-gray-600 tracking-winder">
+                SENTIMENTAL
+            </h1>
 
             {/* 絵文字ボタンエリア */}
-            <div style={{ marginTop: '20px' }}>
-                <button
-                    onClick={() => sendEmoji("😡")} // ボタンを押すと "😡" を引数にして sendEmoji 関数が走る
-                    style={{ fontSize: '3rem', padding: '10px 20px', cursor: 'pointer', borderRadius: '10px', backgroundColor: '#333', border: 'none' }}
+            <div className="flex gap-8">
+                {/* * ボタンのデザイン解説:
+                 * bg-white: ボタンの背景を白に
+                 * rounded-3xl: 角を大きく丸めてソフトな印象に
+                 * shadow-sm: デフォルトではごく薄い影
+                 * hover:shadow-lg hover:-translate-y-1: マウスを乗せると影が濃くなり、少し上にフワッと浮く
+                 * transition-all duration-300 ease-out: 上記の変化を300ミリ秒かけて滑らかに行う
+                 */}
+                 <button
+                     onClick={() => sendEmoji("😡")}
+                     className="text-6xl p-8 bg-white rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out"
                 >
                     😡
                 </button>
                 <button
                     onClick={() => sendEmoji("😭")}
-                    style={{ fontSize: '3rem', padding: '10px 20px', cursor: 'pointer', borderRadius: '10px', backgroundColor: '#333', border: 'none', marinLeft: '10px' }}
+                    className="text-6xl p-8 bg-white rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out"
                 >
                     😭
                 </button>
+                <button
+                    onClick={() => sendEmoji("🥺")}
+                    className="text-6xl p-8 bg-white rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out"
+                >
+                    🥺
+                </button>
             </div>
 
-            {/* やまびこ（受信データ）を表示するエリア */}
-            <div style={{ marginTop: '40px', padding: '20px', backgroundColor: '#222', borderRadius: '10px', width: '80%', maxWidth: '500px', height: '200px', overflowY: 'auto' }}>
-                <h3 style={{ margin: '0 0 10px 0' }}>サーバーからの応答:</h3>
+            {/* やまびこ（受信データ）を表示するログエリア */}
+            <div className="mt-16 p-6 bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-md h-64 overflow-y-auto">
+                <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">
+                    Server Response Log
+                </h3>
 
-                {/* message配列の中身を map 関数で一つずつ取り出して、divタグとして描画する */}
-                {messages.map((msg, index) => (
-                    // key={index} は、Reactが「どの行が変わったか」を識別するための目印として必須
-                    <div key={index} style={{ fontFamily: 'monospace', marginBottom: '5px', color: '#00ff00' }}>
-                        {msg}
-                    </div>
-                ))}
+                <div className="flex flex-col gap-2">
+                    {messages.map((msg, index) => (
+                        <div
+                            key={index}
+                            // ログの1行1行も、角丸の薄いグレー背景にして柔らかく見せる
+                            className="font-mono text-xs text-gray-500 bg-gray-50 p-3 rounded-xl break-words"
+                        >
+                            {msg}
+                        </div>    
+                    ))}
+                    {/* メッセージが無い時のプレースホルダー */}
+                    {messages.length === 0 && (
+                        <div className="text-gray-300 text-sm text-center mt-8">
+                            絵文字を押すとここに通信結果が表示されます
+                        </div>
+                    )}
+                </div>
             </div>
         </main>
     );

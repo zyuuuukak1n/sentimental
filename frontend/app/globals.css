@@ -3,8 +3,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 背景を少し温かみのあるオフブラックに設定 */
+/* * ▼ モダンでソフトな明るいデザインのベース設定
+ * 真っ白（#FFFFFF）や真っ黒（#000000）はコントラストが強すぎて目が疲れるため、
+ * 少しだけグレーやブラウンを混ぜた色を使うのがモダンデザインの鉄則
+ */
 body {
-    background-color: #1c1c1e;
-    color: #f5f5f7;
+    background-color: #F9FAFB;  /* ほんのり温かいオフホワイト */
+    color: #374151; /* 真っ黒ではなく、柔らかいダークグレー */
 }
