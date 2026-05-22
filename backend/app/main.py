@@ -93,7 +93,7 @@ class ConnectionManager:
                         models.Reaction(
                             emoji_code=data["emoji_code"],
                             click_count=data["click_count"],
-                            user_id=data[user_id]
+                            user_id=data["user_id"]
                         ) for data in current_data
                     ]
 
