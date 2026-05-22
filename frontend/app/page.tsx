@@ -24,7 +24,7 @@ export default function Home() {
         // window.location.hostname には、現在ブラウザが表示しているURLの「ドメイン部分」が自動で入る
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL 
             ? `${process.env.NEXT_PUBLIC_WS_URL}/ws/reactions` 
-            : 'ws://${window.location.hostname}:8000/ws/reactions';
+            : `ws://${window.location.hostname}:8000/ws/reactions`;
             
         ws.current = new WebSocket(wsUrl);
 

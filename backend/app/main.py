@@ -32,24 +32,24 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
-        async def connect(self, websocket: WebSocket):
-            await websocket.accept()
-            self.active_connections.append(websocket)
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
         
-        def disconnect(self, websocket: WebSocket):
-            if websocket in self.active_connections:
-                self.active_connections.remove(websocket)
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
         
-        async def broadcast(self, message: str):
-            disconnected_clients = []
-            for connection in self.active_connections:
-                try:
-                    await connection.send_text(message)
-                except Exception:
-                    disconnected_clients.append(connection)
+    async def broadcast(self, message: str):
+        disconnected_clients = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception:
+                disconnected_clients.append(connection)
             
-            for dead_conn in disconnected_clients:
-                self.disconnect(dead_conn)
+        for dead_conn in disconnected_clients:
+            self.disconnect(dead_conn)
 
 # マネージャーのインスタンスを作成
 manager = ConnectionManager()
