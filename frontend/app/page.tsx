@@ -19,6 +19,8 @@ export default function Home() {
     // ---------------------------------------------------------
     const [floatingEmojis, setFloatingEmojis] = useState<FloatingEmoji[]>([]);
 
+    const [totalCounts, setTotalCounts] = useState<Record<string, number>>({"😡": 0, "😭": 0, "🥺": 0});
+
     useEffect(() => {
         // →変更: URLを動的（ダイナミック）にする
         // window.location.hostname には、現在ブラウザが表示しているURLの「ドメイン部分」が自動で入る
