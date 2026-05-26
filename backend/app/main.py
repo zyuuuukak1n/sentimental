@@ -181,7 +181,7 @@ async def websocket_endpoint(websocket: WebSocket):
             response = {
                 "status": "broadcast",
                 "received_emoji": payload.get("emoji"),
-                "click_count": payload.get("count")
+                "click_count": payload.get("count"),
                 "total_counts": manager.total_counts
             }
 
