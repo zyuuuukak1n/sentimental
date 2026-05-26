@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from typing import List
 from .database import engine, Base, AsyncSessionLocal
 from . import models
+from sqlalchemy import select, func
 
 # ---------------------------------------------------------
 # ▼ FastAPIのライフサイクル（起動・終了時の処理）
@@ -17,6 +18,21 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         # 定義したモデル（設計図）をもとに、DBにテーブルが存在しなければ作成する
         await conn.run_sync(Base.metadata.create_all)
+    
+    #【防御的設計】サーバー起動時に1回だけDBから累計を集計し、メモリにキャッシュする
+    # 毎回DBに集計クエリを投げるとシステムが重くなるのを防ぐため
+    async with AsyncSessionLocal() as db:
+        # 各絵文字（emoji_code）ごとに、クリック数（click_count）の合計を計算（func.sum）するSQLを組み立てる
+        stmt = select(models.Reaction.emoji_code, func.sum(models.Reaction.click_count)).group_by(models.Reaction.emoji_code)
+        result = await db.execute(stmt)
+
+        # 集計結果を ConnectionManager の total_counts にセットする
+        for row in result:
+            emoji = row[0]
+            total = row[1]
+            if emoji in manager.total_counts:
+                # DBにデータがない場合は None になることがあるため、その場合は0にする
+                manager.total_counts[emoji] = total or 0
     
     # サーバー起動と同時に、バッファ定期保存処理（flush_buffer_periodically）をバックグラウンドタスクとして開始
     flush_task = asyncio.create_task(manager.flush_buffer_periodically())
@@ -40,6 +56,7 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
         self.reaction_buffer = []   # 【防御的設計】DBへの過剰アクセスを防ぐため、クリックデータを一時的に溜め込むバッファ
+        self.total_counts = {"😡": 0, "😭": 0, "🥺": 0} # 【防御的設計】DBへの問い合わせを減らすため、全絵文字の累計クリック数をメモリ上で保持する辞書
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -129,6 +146,13 @@ async def websocket_endpoint(websocket: WebSocket):
         new_user = models.User(id=guest_id, is_guest=True)
         db.add(new_user)
         await db.commit()
+    
+    # ユーザーが接続してきた瞬間に、現在の「累計カウント」をその人だけに送る
+    init_response = {
+        "status": "init",
+        "total_counts": manager.total_counts
+    }
+    await websocket.send_text(json.dumps(init_response, ensure_ascii=False))
 
     print(f"クライアントが接続しました。現在の接続数: {len(manager.active_connections)}")
 
@@ -142,11 +166,14 @@ async def websocket_endpoint(websocket: WebSocket):
             payload = json.loads(data)
 
             emoji = payload.get("emoji")
-            count = payload.get("count")
+            count = payload.get("count", 1)
 
             # 絵文字とカウントが正しく送られてきたら、保存用のバッファに突っ込む
             if emoji and count:
                 manager.add_to_buffer(emoji, count, guest_id)
+                # メモリ上の累計カウントもリアルタイムで加算する
+                if emoji in manager.total_counts:
+                    manager.total_counts[emoji] += count
 
             # 4. 返信用のデータを作成
             # payload.get("emoji") は、もし"emoji"というキーが無ければエラーにならずに
@@ -155,6 +182,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "status": "broadcast",
                 "received_emoji": payload.get("emoji"),
                 "click_count": payload.get("count")
+                "total_counts": manager.total_counts
             }
 
             # 5. 辞書型のデータを再び「JSON文字列」に変換して、クライアントへ送信（やまびこ）

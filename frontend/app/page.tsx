@@ -39,9 +39,14 @@ export default function Home() {
 
             // JSON文字列をJavaScriptのオブジェクトに変換
             const data = JSON.parse(event.data);
+
+            // サーバーから total_counts が送られてきたら、Stateを更新して画面に反映させる
+            if (data.total_counts) {
+                setTotalCounts(data.total_counts);
+            }
             
             // サーバーから「絵文字」が送られてきた場合、アニメーションを発生させる
-            if (data.received_emoji) {
+            if (data.received_emoji && data.status === "broadcast") {
                 // 1. 新しい絵文字オブジェクトを作成
                 const newEmoji: FloatingEmoji = {
                     id: Date.now() + Math.random(), // 時間＋乱数で絶対に被らないIDを作る
@@ -104,25 +109,36 @@ export default function Home() {
                   * gap-4 md:gap-8: スマホでは隙間を狭く、PC(md以上)では広く
                   */}
                 <div className="flex flex-wrap justify-center gap-4 md:gap-8 w-full px-2">
-                    <button 
-                        onClick={() => sendEmoji("😡")} 
-                        // ▼ 修正：スマホでは余白と文字サイズを少し小さくする
-                        className="text-5xl md:text-6xl p-5 md:p-8 bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out"
-                    >
-                        😡
-                    </button>
-                    <button 
-                        onClick={() => sendEmoji("😭")} 
-                        className="text-5xl md:text-6xl p-5 md:p-8 bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out"
-                    >
-                        😭
-                    </button>
-                    <button 
-                        onClick={() => sendEmoji("🥺")} 
-                        className="text-5xl md:text-6xl p-5 md:p-8 bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out"
-                    >
-                        🥺
-                    </button>
+                    {/* 😡 ボタンのブロック */}
+                    <div className="flex flex-col items-center gap-2">
+                        <button onClick={() => sendEmoji("😡")} className="text-5xl md:text-6xl p-5 md:p-8 bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out">
+                            😡
+                        </button>
+                        {/* ▼ 追加：カンマ区切りで累計数を表示 */}
+                        <span className="text-sm font-bold text-gray-500 tracking-wider">
+                            {totalCounts["😡"]?.toLocaleString() || 0}
+                        </span>
+                    </div>
+
+                    {/* 😭 ボタンのブロック */}
+                    <div className="flex flex-col items-center gap-2">
+                        <button onClick={() => sendEmoji("😭")} className="text-5xl md:text-6xl p-5 md:p-8 bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out">
+                            😭
+                        </button>
+                        <span className="text-sm font-bold text-gray-500 tracking-wider">
+                            {totalCounts["😭"]?.toLocaleString() || 0}
+                        </span>
+                    </div>
+
+                    {/* 🥺 ボタンのブロック */}
+                    <div className="flex flex-col items-center gap-2">
+                        <button onClick={() => sendEmoji("🥺")} className="text-5xl md:text-6xl p-5 md:p-8 bg-white rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out">
+                            🥺
+                        </button>
+                        <span className="text-sm font-bold text-gray-500 tracking-wider">
+                            {totalCounts["🥺"]?.toLocaleString() || 0}
+                        </span>
+                    </div>
                 </div>
 
                 {/* ログエリア */}
