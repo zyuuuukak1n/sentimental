@@ -8,6 +8,7 @@ from typing import List
 from .database import engine, Base, AsyncSessionLocal
 from . import models
 from sqlalchemy import select, func
+import emoji
 
 # ---------------------------------------------------------
 # ▼ FastAPIのライフサイクル（起動・終了時の処理）
@@ -165,29 +166,32 @@ async def websocket_endpoint(websocket: WebSocket):
             # 3. 受診した単なる「文字列」を、Pythonで扱える「辞書型（dict）」に変換
             payload = json.loads(data)
 
-            emoji = payload.get("emoji")
+            # 送られてきたデータを一旦変数で受け取る
+            received_text = payload.get("emoji")
             count = payload.get("count", 1)
 
-            # 絵文字とカウントが正しく送られてきたら、保存用のバッファに突っ込む
-            if emoji and count:
-                manager.add_to_buffer(emoji, count, guest_id)
-                # メモリ上の累計カウントもリアルタイムで加算する
-                if emoji in manager.total_counts:
-                    manager.total_counts[emoji] += count
+            # emoji.is_emoji() は、渡された文字が「完全に1つの絵文字」である場合のみ True を返す。
+            if received_text and emoji.is_emoji(received_text) and count:
 
-            # 4. 返信用のデータを作成
-            # payload.get("emoji") は、もし"emoji"というキーが無ければエラーにならずに
-            # None を返してくれる安全な書き方
-            response = {
-                "status": "broadcast",
-                "received_emoji": payload.get("emoji"),
-                "click_count": payload.get("count"),
-                "total_counts": manager.total_counts
-            }
+                manager.add_to_buffer(received_text, count, guest_id)
 
-            # 5. 辞書型のデータを再び「JSON文字列」に変換して、クライアントへ送信（やまびこ）
-            # →変更: やまびこではなく、マネージャーを使って全員に一斉送信
-            await manager.broadcast(json.dumps(response, ensure_ascii=False))
+                if received_text in manager.total_counts:
+                    manager.total_counts[received_text] += count
+                else:
+                    # まだ誰も押したことがない新しい絵文字が来た場合は、辞書に新規追加する
+                    manager.total_counts[received_text] = count
+                
+                response = {
+                    "status": "broadcast",
+                    "received_emoji": received_text,
+                    "click_count": count,
+                    "total_counts": manager.total_counts
+                }
+
+                await manager.broadcast(json.dumps(response, ensure_ascii=False))
+            else:
+                #不正なデータが送られてきた場合は、サーバーのログにだけ残して警告する
+                print(f"【警告】不正な絵文字データを受診し、破棄しました: {received_text}")
     
     # クライアントがブラウザを閉じるなどして通信が切れた場合のエラーハンドリング
     except WebSocketDisconnect:

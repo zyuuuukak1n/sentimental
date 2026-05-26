@@ -143,6 +143,28 @@ export default function Home() {
                     </div>
                 </div>
 
+                {/* 自由な絵文字の入力エリア */}
+                <div className="mt-8 flex flex-col items-center w-full">
+                    <p className="text-xs text-gray-400 mb-2 font-bold tracking-widest">
+                        OR TYPE ANY EMOJI
+                    </p>
+                    <input
+                        type="text"
+                        placeholder="✨ ここに入力..."
+                        className="p-4 rounded-2xl border-2 border-gray-100 text-3xl text-center bg-white/50 focus:bg-white focus:outline-none focus:border-blue-200 focus:ring-4 focus:ring-blue-50 transition-all duration-300 w-64 shadow-sm"
+                        // onChange は「入力欄の中身が変わった瞬間」に発動する
+                        // 絵文字が1つ入力されたら即座に sendEmoji でサーバーに送信し、
+                        // e.target.value = '' で入力欄を瞬時にリセットする。
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                                sendEmoji(val);
+                                e.target.value = '';
+                            }
+                        }}
+                    />
+                </div>
+
                 {/* ログエリア */}
                 <div className="mt-12 md:mt-16 p-5 md:p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 w-full max-w-md h-48 md:h-64 overflow-y-auto">
                     <h3 className="text-xs md:text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">
