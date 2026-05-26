@@ -2,6 +2,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
+
+const EmojiPicker = dynamic(
+    () => import('emoji-picker-react'),
+    { ssr: false }
+);
 
 // アニメーションさせる絵文字のデータを管理するための型定義（TypeScriptの機能）
 type FloatingEmoji = {
@@ -20,6 +26,8 @@ export default function Home() {
     const [floatingEmojis, setFloatingEmojis] = useState<FloatingEmoji[]>([]);
 
     const [totalCounts, setTotalCounts] = useState<Record<string, number>>({"😡": 0, "😭": 0, "🥺": 0});
+
+    const [showPicker, setShowPicker] = useState<boolean>(false);
 
     useEffect(() => {
         // →変更: URLを動的（ダイナミック）にする
@@ -85,7 +93,7 @@ export default function Home() {
     // ▼ UI描画部分（レスポンシブ対応版）
     // ---------------------------------------------------------
     return (
-        <main className="min-h-screen relative flex flex-col items-center justify-center font-sans p-4 overflow-hidden">
+        <main className="min-h-screen relative flex flex-col items-center justify-start md:justify-center font-sans p-4 py-12 overflow-x-hidden overflow-y-scroll">
             
             {/* フワフワ浮かぶ絵文字の描画エリア */}
             <div className="absolute inset-0 pointer-events-none z-0">
@@ -145,6 +153,7 @@ export default function Home() {
 
                 {/* 自由な絵文字の入力エリア */}
                 <div className="mt-8 flex flex-col items-center w-full">
+                    {/* 
                     <p className="text-xs text-gray-400 mb-2 font-bold tracking-widest">
                         OR TYPE ANY EMOJI
                     </p>
@@ -162,10 +171,43 @@ export default function Home() {
                                 e.target.value = '';
                             }
                         }}
-                    />
+                    />  */}
+
+                    {/* ▼▼▼ ここから追加：絵文字ピッカーボタンと本体の描画 ▼▼▼ */}
+                    {/* 【学習コメント】
+                      * ボタンを押すたびに、現在の showPicker の状態を反転（!）させて開閉します。
+                      */}
+                    <button
+                        onClick={() => setShowPicker(!showPicker)}
+                        className="mt-4 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl text-sm shadow-sm transition-all duration-300 flex items-center gap-2 z-20"
+                    >
+                        {showPicker ? "❌ ピッカーを閉じる" : "😀 ピッカーから選ぶ"}
+                    </button>
+
+                    {/* 【学習コメント：条件付きレンダリング】
+                      * showPicker が true の時だけ、&& よりも右側のHTMLコードが画面に実体化します。
+                      */}
+                    {showPicker && (
+                        <div className="mt-4 z-50 shadow-xl rounded-2xl overflow-hidden">
+                            <EmojiPicker 
+                                // ピッカー内の絵文字がクリックされたら発動するイベント
+                                onEmojiClick={(emojiObject) => {
+                                    // emojiObject.emoji の中に「🍣」や「🎉」といった実際の文字データが入っています
+                                    sendEmoji(emojiObject.emoji); 
+                                    // 送信したら、画面をスッキリさせるためにピッカーを自動で閉じます（親切設計）
+                                    // setShowPicker(false);         
+                                }}
+                                // アプリの柔らかい雰囲気に合わせるためのビジュアル調整
+                                previewConfig={{ showPreview: false }} // 下部の余計なプレビュー欄を消してコンパクトにする
+                                width="320px"
+                                height="350px"
+                            />
+                        </div>
+                    )}
+
                 </div>
 
-                {/* ログエリア */}
+                {/* ログエリア
                 <div className="mt-12 md:mt-16 p-5 md:p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 w-full max-w-md h-48 md:h-64 overflow-y-auto">
                     <h3 className="text-xs md:text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">
                         Server Response Log
@@ -177,7 +219,7 @@ export default function Home() {
                             </div>
                         ))}
                     </div>
-                </div>
+                </div>  */}
             </div>
         </main>
     );
