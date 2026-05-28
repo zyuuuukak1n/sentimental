@@ -2,7 +2,11 @@
 import json # JSON（データを文字として送受信するための世界標準フォーマット）を扱うライブラリ
 import asyncio  # 定期実行の非同期処理を行うための標準ライブラリ
 import uuid # ユーザーごとの絶対に被らない一意のIDを生成するためのライブラリ
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import os # .envから環境変数を読み込むためのライブラリ
+import httpx # Googleのサーバーに通信を送るためのライブラリ
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from typing import List
 from .database import engine, Base, AsyncSessionLocal
@@ -46,9 +50,80 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Sentimental API", lifespan=lifespan)
 
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "バックエンド正常稼働中、DB接続OK"}
+
+# ---------------------------------------------------------
+# ▼ Google OAuth認証エンドポイント
+# ---------------------------------------------------------
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_ID")
+# Googleのログイン画面からの戻ってくるためのURL
+REDIRECT_URI = "http://localhost:8000/auth/google/callback"
+
+@app.get("/auth/google/login")
+async def login_via_google():
+    # Googleの公式ログイン画面へ誘導するURLを組み立てて返す
+    auth_url = (
+        f"https://account.google.com/o/oauth2/v2/auth?"
+        f"response_type=code&"
+        f"client_id={GOOGLE_CLIENT_ID}&"
+        f"redirect_uri={REDIRECT_URI}&"
+        f"scope=openid%20profile%20email&"
+        f"access_type=offline"
+    )
+    return {"url": auth_url}
+
+@app.get("/auth/google/callback")
+async def auth_google_callback(code: str):
+    # ユーザーがGoogle画面で「許可」を押すと、GoogleからこのURLに「code（ワンタイムパスワードのようなもの）」が送られてくる。
+    # この code と、誰にも見せていない client_secret を使って、裏側でGoogleからアクセストークンを貰う。
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": REDIRECT_URI,
+        "grant_type": "authorization_code",
+    }
+
+    async with httpx.AsyncClient() as client:
+        # トークンを要求
+        token_res = await client.post(token_url, data=data)
+        token_data = token_res.json()
+
+        if "error" in token_data:
+            raise HTTPException(status_code=400, datail="Google認証に失敗しました。")
+
+        access_token = token_data.get("access_token")
+
+        # 貰ったアクセストークンを使って、ユーザーのプロフィール情報を取得
+        userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        user_res = await client.get(userinfo_url, headers=headers)
+        user_info = user_res.json()
+
+        #　動作確認用
+        print("🎉 Googleユーザー情報取得成功:", user_info)
+
+        # 本来はここでデータベースのゲストIDと紐付けを行いますが、今回はまず認証が通るかを確認するため、
+        # フロントエンド（アプリの画面）にリダイレクトして戻します。
+        return RedirectResponse(url=f"http://localhost:3000?login_success=true&name={user_info.get('name')}")
 
 # ---------------------------------------------------------
 # ▼ WebSocketの接続状態を管理するクラス

@@ -6,3 +6,4 @@ asyncpg==0.29.0
 redis==5.0.4
 pydantic-settings==2.2.1
 emoji
+httpx
