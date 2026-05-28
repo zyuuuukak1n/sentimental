@@ -72,21 +72,33 @@ async def root():
 # ▼ Google OAuth認証エンドポイント
 # ---------------------------------------------------------
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 # Googleのログイン画面からの戻ってくるためのURL
 REDIRECT_URI = "http://localhost:8000/auth/google/callback"
 
 @app.get("/auth/google/login")
 async def login_via_google():
-    # Googleの公式ログイン画面へ誘導するURLを組み立てて返す
-    auth_url = (
-        f"https://account.google.com/o/oauth2/v2/auth?"
-        f"response_type=code&"
-        f"client_id={GOOGLE_CLIENT_ID}&"
-        f"redirect_uri={REDIRECT_URI}&"
-        f"scope=openid%20profile%20email&"
-        f"access_type=offline"
+    # ▼ 追加：【防御的設計】環境変数が空っぽのままGoogleに通信してしまうのを防ぐ
+    # これが無いと、IDがNoneのままGoogleに送られ、今回のような 401 invalid_client エラーになります。
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=500, 
+            detail="バックエンドの環境変数（GOOGLE_CLIENT_ID/SECRET）が正しく読み込めていません。.envファイルとdocker-composeの設定を確認してください。"
+        )
+
+    # ▼ 修正箇所2：「account.google.com」の複数形の s が抜けていたタイポを「accounts」に修正
+    base_url = "https://accounts.google.com/o/oauth2/v2/auth"
+    
+    # URLのパラメータを綺麗に結合（前回の提案コードを適用します）
+    params = (
+        f"response_type=code"
+        f"&client_id={GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={REDIRECT_URI}"
+        f"&scope=openid%20profile%20email"
+        f"&access_type=offline"
     )
+    
+    auth_url = f"{base_url}?{params}"
     return {"url": auth_url}
 
 @app.get("/auth/google/callback")

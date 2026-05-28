@@ -135,6 +135,15 @@ export default function Home() {
                                 : `http://${window.location.hostname}:8000`;
 
                             const res = await fetch(`${apiUrl}/auth/google/login`);
+
+                            // res.ok は、ステータスコードが 200〜299（成功）の時だけ true になります
+                                if (!res.ok) {
+                                    const errorData = await res.json();
+                                    // ブラウザのアラートでユーザー（または開発者）にエラー原因を通知します
+                                    alert(`サーバーエラーが発生しました:\n${errorData.detail}`);
+                                    return; // ここで処理を中断し、undefinedへの遷移を防ぎます
+                                }
+
                             const data = await res.json();
                             // Googleのログイン画面へ移動
                             window.location.href = data.url;
