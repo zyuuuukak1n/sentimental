@@ -16,6 +16,19 @@ type FloatingEmoji = {
     left: number;   // 画面の横幅のどこから出現するか（%）
 };
 
+const generateSafeUUID = () => {
+    // crypto.randomUUID が使える環境ならそのまま使う
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // 使えない環境なら、自力で文字列を生成する
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+};
+
 export default function Home() {
     const [messages, setMessages] = useState<string[]>([]);
     const ws = useRef<WebSocket | null>(null);
@@ -33,7 +46,7 @@ export default function Home() {
         let storedId = localStorage.getItem("sentimental_user_id");
 
         if (!storedId) {
-            storedId = crypto.randomUUID();
+            storedId = generateSafeUUID();
             localStorage.setItem("sentimental_user_id", storedId);
         }
 
