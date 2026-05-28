@@ -132,21 +132,30 @@ manager = ConnectionManager()
 # ---------------------------------------------------------
 # @app.websocket は、通常のHTTP（1回送って1回帰ってくる）ではなく、
 # 「繋ぎっぱなし（双方向通信）」の経路を作るための設定
-@app.websocket("/ws/reactions")
-async def websocket_endpoint(websocket: WebSocket):
+@app.websocket("/ws/reactions/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
     # 1. クライアント（ブラウザ）からの接続要求を許可（ハンドシェイク）
     # →変更: マネージャー経由で接続を受け入れる
     await manager.connect(websocket)
 
-    # 接続してきたユーザーに。一時的なゲストID（UUID）を発行
-    guest_id = uuid.uuid4()
-
-    # データベース（userテーブル）に、このゲストIDのレコードを登録しておく
-    # ※これをしないと、Reaction保存時に「存在しないユーザーIDです」と外部キー制約エラーで弾かれる
+    try:
+        user_uuid = uuid.UUID(client_id)
+    except ValueError:
+        print(f"【警告】不正なIDでの接続試行を遮断しました: {client_id}")
+        await websocket.close(code=1000)    # 1000 は「ポリシー違反」を示す切断コード
+        return
+    
     async with AsyncSessionLocal() as db:
-        new_user = models.User(id=guest_id, is_guest=True)
-        db.add(new_user)
-        await db.commit()
+        # このIDが既にデータベースに存在するか検索
+        stmt = select(models.User).where(models.User.id == user_uuid)
+        result = await db.execute(stmt)
+        existing_user = result.scalar_one_or_none()
+
+        # 存在しない場合のみ新規ゲストとしてDBに登録
+        if not existing_user:
+            new_user = models.User(id=user_uuid, is_guest=True)
+            db.add(new_user)
+            await db.commit()
     
     # ユーザーが接続してきた瞬間に、現在の「累計カウント」をその人だけに送る
     init_response = {
@@ -173,7 +182,7 @@ async def websocket_endpoint(websocket: WebSocket):
             # emoji.is_emoji() は、渡された文字が「完全に1つの絵文字」である場合のみ True を返す。
             if received_text and emoji.is_emoji(received_text) and count:
 
-                manager.add_to_buffer(received_text, count, guest_id)
+                manager.add_to_buffer(received_text, count, user_uuid)
 
                 if received_text in manager.total_counts:
                     manager.total_counts[received_text] += count

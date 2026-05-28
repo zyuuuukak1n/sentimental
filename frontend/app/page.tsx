@@ -30,11 +30,16 @@ export default function Home() {
     const [showPicker, setShowPicker] = useState<boolean>(false);
 
     useEffect(() => {
-        // →変更: URLを動的（ダイナミック）にする
-        // window.location.hostname には、現在ブラウザが表示しているURLの「ドメイン部分」が自動で入る
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL 
-            ? `${process.env.NEXT_PUBLIC_WS_URL}/ws/reactions` 
-            : `ws://${window.location.hostname}:8000/ws/reactions`;
+        let storedId = localStorage.getItem("sentimental_user_id");
+
+        if (!storedId) {
+            storedId = crypto.randomUUID();
+            localStorage.setItem("sentimental_user_id", storedId);
+        }
+
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL
+            ? `${process.env.NEXT_PUBLIC_WS_URL}/ws/reactions/${storedId}`
+            : `ws://${window.location.hostname}:8000/ws/reactions/${storedId}`;
             
         ws.current = new WebSocket(wsUrl);
 
@@ -153,8 +158,10 @@ export default function Home() {
 
                 {/* 自由な絵文字の入力エリア */}
                 <div className="mt-8 flex flex-col items-center w-full">
-                    {/* 
-                    <p className="text-xs text-gray-400 mb-2 font-bold tracking-widest">
+                    
+                    {/* ========================================= */}
+                    {/* 【非表示】入力欄 */}
+                    {/* <p className="text-xs text-gray-400 mb-2 font-bold tracking-widest">
                         OR TYPE ANY EMOJI
                     </p>
                     <input
@@ -172,11 +179,9 @@ export default function Home() {
                             }
                         }}
                     />  */}
+                    {/* ========================================= */}
 
-                    {/* ▼▼▼ ここから追加：絵文字ピッカーボタンと本体の描画 ▼▼▼ */}
-                    {/* 【学習コメント】
-                      * ボタンを押すたびに、現在の showPicker の状態を反転（!）させて開閉します。
-                      */}
+                    {/* 絵文字ピッカーボタンと本体の描画 */}
                     <button
                         onClick={() => setShowPicker(!showPicker)}
                         className="mt-4 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl text-sm shadow-sm transition-all duration-300 flex items-center gap-2 z-20"
@@ -207,8 +212,9 @@ export default function Home() {
 
                 </div>
 
-                {/* ログエリア
-                <div className="mt-12 md:mt-16 p-5 md:p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 w-full max-w-md h-48 md:h-64 overflow-y-auto">
+                {/* ========================================= */}
+                {/* 【非表示】ログエリア */}
+                {/* <div className="mt-12 md:mt-16 p-5 md:p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 w-full max-w-md h-48 md:h-64 overflow-y-auto">
                     <h3 className="text-xs md:text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">
                         Server Response Log
                     </h3>
@@ -220,6 +226,8 @@ export default function Home() {
                         ))}
                     </div>
                 </div>  */}
+                {/* ========================================= */}
+
             </div>
         </main>
     );
