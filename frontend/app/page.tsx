@@ -45,6 +45,13 @@ export default function Home() {
     // ハンバーガーメニューの開閉状態
     const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
 
+    // モーダルの開閉状態、現在のモード、入力フォームの値を管理
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+    const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
+    const [authEmail, setAuthEmail] = useState<string>("");
+    const [authPassword, setAuthPassword] = useState<string>("");
+    const [authName, setAuthName] = useState<string>("");
+
     useEffect(() => {
         let storedId = localStorage.getItem("sentimental_user_id");
 
@@ -185,7 +192,13 @@ export default function Home() {
                             Continue with X
                         </button>
                         <div className="w-full h-px bg-gray-100 my-1"></div>
-                        <button className="w-full px-4 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-sm transition-all flex items-center gap-3 opacity-50 cursor-not-allowed" title="準備中">
+                        <button 
+                            onClick={() => {
+                                setIsMenuOpen(false);
+                                setIsAuthModalOpen(true);
+                            }}
+                            className="w-full px-4 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-sm transition-all flex items-center gap-3"
+                        >
                             <span className="w-5 h-5 flex items-center justify-center shrink-0">✉️</span>
                             Email / Password
                         </button>
@@ -310,6 +323,121 @@ export default function Home() {
                 {/* ========================================= */}
 
             </div>
+
+            {/* 認証モーダルUIと通信ロジック */}
+            {isAuthModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative overflow-hidden">
+
+                        {/* 閉じるボタン */}
+                        <button
+                            onClick={() => setIsAuthModalOpen(false)}
+                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+                            {isLoginMode ? "おかえりなさい" : "アカウント作成"}
+                        </h2>
+
+                        <form 
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                const apiUrl = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}` : `http://${window.location.hostname}:8000`;
+                                const endpoint = isLoginMode ? "/auth/login" : "/auth/register";
+                                
+                                // 送信するデータをモードに応じて切り替え
+                                const payload = isLoginMode
+                                    ? { email: authEmail, password: authPassword }
+                                    : { email: authEmail, password: authPassword, name: authName };
+
+                                try {
+                                    // 【学習コメント】
+                                    // fetch() でPOST通信を行います。headersで「JSON形式で送るよ」と宣言し、
+                                    // bodyでJavaScriptのオブジェクトを文字列（JSON）に変換して送信します。
+                                    const res = await fetch(`${apiUrl}${endpoint}`, {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify(payload),
+                                    });
+
+                                    if (!res.ok) {
+                                        const errorData = await res.json();
+                                        alert(`エラー: ${errorData.detail}`);
+                                        return;
+                                    }
+
+                                    const data = await res.json();
+                                    
+                                    // 【最重要：ゲストIDの上書き】
+                                    // ログイン成功時にバックエンドから発行された正規のユーザーIDをローカルストレージに保存し、
+                                    // ゲストIDから「本会員ID」へと昇格させます。
+                                    localStorage.setItem("sentimental_user_id", data.user_id);
+                                    
+                                    alert(`${data.message}\nようこそ！`);
+                                    setIsAuthModalOpen(false);
+                                    
+                                    // IDが切り替わったため、WebSocketを繋ぎ直すために画面をリロード
+                                    window.location.reload();
+
+                                } catch (error) {
+                                    alert("サーバーとの通信に失敗しました。ネットワークを確認してください。");
+                                }
+                            }}
+                            className="flex flex-col gap-4"
+                        >
+                            {!isLoginMode && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600 mb-1">表示名</label>
+                                    <input 
+                                        type="text" required
+                                        value={authName} onChange={(e) => setAuthName(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-700"
+                                        placeholder="Sentimental 太郎"
+                                    />
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-600 mb-1">メールアドレス</label>
+                                <input 
+                                    type="email" required
+                                    value={authEmail} onChange={(e) => setAuthEmail(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-700"
+                                    placeholder="your@email.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-600 mb-1">パスワード</label>
+                                <input 
+                                    type="password" required minLength={6}
+                                    value={authPassword} onChange={(e) => setAuthPassword(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-700"
+                                    placeholder="6文字以上"
+                                />
+                            </div>
+
+                            <button 
+                                type="submit"
+                                className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all mt-4"
+                            >
+                                {isLoginMode ? "ログイン" : "登録してはじめる"}
+                            </button>
+                        </form>
+
+                        <div className="mt-6 text-center text-sm text-gray-500">
+                            {isLoginMode ? "アカウントをお持ちでないですか？" : "すでにアカウントをお持ちですか？"}
+                            <button 
+                                onClick={() => setIsLoginMode(!isLoginMode)}
+                                className="ml-2 font-bold text-blue-500 hover:text-blue-600 transition-colors"
+                            >
+                                {isLoginMode ? "新規登録" : "ログイン"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </main>
     );
 }
