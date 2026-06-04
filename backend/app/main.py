@@ -143,7 +143,7 @@ async def auth_google_callback(code: str):
         token_data = token_res.json()
 
         if "error" in token_data:
-            raise HTTPException(status_code=400, datail="Google認証に失敗しました。")
+            raise HTTPException(status_code=400, detail="Google認証に失敗しました。")
 
         access_token = token_data.get("access_token")
 
@@ -172,7 +172,7 @@ async def register_user(user_data: UserCreate):
         existing_user = result.scalar_one_or_none()
 
         if existing_user:
-            raise HTTPException(status_code=400, datail="このメールアドレスは既に登録されています。")
+            raise HTTPException(status_code=400, detail="このメールアドレスは既に登録されています。")
         
         # 2. パスワードを暗号化
         hashed_pw = get_password_hash(user_data.password)
@@ -192,7 +192,7 @@ async def register_user(user_data: UserCreate):
         print(f"🎉 新規ユーザー登録成功: {new_user.email}")
         return {"status": "success", "message": "登録が完了しました", "user_id": str(new_user.id)}
 
-@app.post("auth/login")
+@app.post("/auth/login")
 async def login_user(user_data: userLogin):
     async with AsyncSessionLocal() as db:
         # 1. メールアドレスでユーザーを検索

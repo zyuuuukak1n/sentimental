@@ -7,5 +7,6 @@ redis==5.0.4
 pydantic-settings==2.2.1
 emoji
 httpx
-passlib[bcrypt]
+passlib
+bcrypt==3.2.2
 python-multipart
