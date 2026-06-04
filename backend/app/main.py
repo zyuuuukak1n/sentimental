@@ -13,6 +13,29 @@ from .database import engine, Base, AsyncSessionLocal
 from . import models
 from sqlalchemy import select, func
 import emoji
+from passlib.context import CryptContext
+from pydantic import BaseModel
+
+# bcryptアルゴリズムを使用した協力なパスワードハッシュ化設定
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    """入力されたパスワードと、DBの暗号化パスワードが一致するか検証する"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    """パスワードを復元不可能な文字列（ハッシュ）に変換する"""
+    return pwd_context.hash(password)
+
+# フロントエンドから送られてくる「新規登録データ」の形を厳格に定義
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class userLogin(BaseModel):
+    email: str
+    password: str
 
 # ---------------------------------------------------------
 # ▼ FastAPIのライフサイクル（起動・終了時の処理）
@@ -136,6 +159,53 @@ async def auth_google_callback(code: str):
         # 本来はここでデータベースのゲストIDと紐付けを行いますが、今回はまず認証が通るかを確認するため、
         # フロントエンド（アプリの画面）にリダイレクトして戻します。
         return RedirectResponse(url=f"http://localhost:3000?login_success=true&name={user_info.get('name')}")
+
+# ---------------------------------------------------------
+# ▼ メールアドレス・パスワード認証エンドポイント
+# ---------------------------------------------------------
+@app.post("/auth/register")
+async def register_user(user_data: UserCreate):
+    async with AsyncSessionLocal() as db:
+        # 1. 既に同じメールアドレスが登録されていないかチェック
+        stmt = select(models.User).where(models.User.email == user_data.email)
+        result = await db.execute(stmt)
+        existing_user = result.scalar_one_or_none()
+
+        if existing_user:
+            raise HTTPException(status_code=400, datail="このメールアドレスは既に登録されています。")
+        
+        # 2. パスワードを暗号化
+        hashed_pw = get_password_hash(user_data.password)
+
+        # 3. 新規ユーザーとしてDBに保存
+        new_user = models.User(
+            email=user_data.email,
+            hashed_password=hashed_pw,
+            name=user_data.name,
+            auth_provider="local",
+            is_guest=False
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+
+        print(f"🎉 新規ユーザー登録成功: {new_user.email}")
+        return {"status": "success", "message": "登録が完了しました", "user_id": str(new_user.id)}
+
+@app.post("auth/login")
+async def login_user(user_data: userLogin):
+    async with AsyncSessionLocal() as db:
+        # 1. メールアドレスでユーザーを検索
+        stmt = select(models.User).where(models.User.email == user_data.email)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        # 2. ユーザーが存在しない or パスワードが間違っている場合の検証
+        if not user or not user.hashed_password or not verify_password(user_data.password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが間違っています。")
+        
+        print(f"🎉 ログイン成功: {user.email}")
+        return {"status": "success", "message": "ログインしました", "user_id": str(user.id), "name": user.name}
 
 # ---------------------------------------------------------
 # ▼ WebSocketの接続状態を管理するクラス
