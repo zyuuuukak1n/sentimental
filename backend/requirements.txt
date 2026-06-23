@@ -1,0 +1,16 @@
+# backend/requirements.txt
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+redis==5.0.4
+pydantic-settings==2.2.1
+emoji
+httpx
+passlib
+bcrypt==3.2.2
+python-multipart
+PyJWT==2.8.0
+pytest==8.2.2
+pytest-asyncio==0.23.7
+slowapi
