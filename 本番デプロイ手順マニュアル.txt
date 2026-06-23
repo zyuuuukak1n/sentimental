@@ -1,0 +1,88 @@
+本番デプロイ手順マニュアル
+STEP 1: 地図プロバイダ（MapTiler）の準備
+感情マップの背景を描画するため、商用利用可能かつ無料枠のあるMapTilerを利用します。
+
+MapTiler公式サイトにアクセスし、アカウントを作成します。
+ダッシュボードの「API keys」メニューを開き、**「New API key」**を作成します。
+発行された文字列（APIキー）をメモしておきます。これがフロントエンドで必要な NEXT_PUBLIC_MAPTILER_API_KEY になります。
+STEP 2: フロントエンド（Cloudflare Pages）の設定と環境変数注入
+フロントエンドはCloudflare Pagesでのホスティングが最適です。
+
+GitHub連携: Cloudflareのダッシュボードから「Pages」→「Gitに接続」を選択し、本リポジトリ（frontend ディレクトリ）を指定します。
+ビルド設定:
+フレームワーク: Next.js
+ビルドコマンド: npm run build
+出力ディレクトリ: .next （またはCloudflare推奨の設定）
+環境変数（シークレット情報）の設定: ビルド設定画面の「環境変数（Environment variables）」にて、以下の値を必ず手動で注入してください。
+NEXT_PUBLIC_MAPTILER_API_KEY = （STEP 1で取得したAPIキー）
+NEXT_PUBLIC_API_URL = https://api.your-domain.com （バックエンドの公開ドメイン）
+NEXT_PUBLIC_WS_URL = wss://api.your-domain.com （Websocket用エンドポイント）
+デプロイの実行: 保存してデプロイを開始します。これでフロントエンドの公開URLが生成されます。
+STEP 3: AWS EC2（バックエンド）のインフラ構築
+バックエンドAPIとWebSocket、データベースをホストするための土台を作ります。
+
+EC2インスタンスの立ち上げ:
+AWSコンソールからEC2を開き、「インスタンスを起動」を選択。
+OSは「Ubuntu Server」を推奨（Docker等のインストールが容易なため）。
+キーペア（SSHキー）を新規作成してダウンロードし、安全な場所に保管します。
+セキュリティグループ（ポート開放）の設計: インバウンドルールに以下を設定します。
+SSH (22): お客様の作業PCのIPアドレスからのみ許可（安全のため）。
+HTTP (80) および HTTPS (443): どこからでも（0.0.0.0/0）許可。
+カスタムTCP (8000): Cloudflareのプロキシ経由のみに絞るか、テスト時は 0.0.0.0/0 で許可します。
+サーバーへのログインと環境構築:
+SSHでEC2に接続後、docker と docker-compose をインストールします。
+リポジトリのソースコードをクローンします。
+バックエンドの環境変数設定:
+backend フォルダ直下に .env ファイルを手動で作成し、以下のシークレット情報を書き込みます。
+env
+# DB接続（Docker内で起動するPostgreSQLを指す）
+DATABASE_URL="postgresql+asyncpg://postgres:postgres@db:5432/sentimental"
+# セキュリティ・CORS設定（STEP 2で生成されたフロントエンドのURL）
+FRONTEND_URL="https://your-domain.com"
+# Google認証情報
+GOOGLE_CLIENT_ID="GCPで取得したクライアントID"
+GOOGLE_CLIENT_SECRET="GCPで取得したシークレット"
+GOOGLE_REDIRECT_URI="https://api.your-domain.com/auth/google/callback"
+サービスの起動: docker-compose up -d --build でバックエンドとDBを立ち上げます。
+STEP 4: ドメインとCloudflareのセットアップ（SSL/CDN化）
+バックエンドもフロントエンドと同じ独自ドメインのサブドメイン（例: api.your-domain.com）で運用し、HTTPS化します。
+
+ネームサーバーの変更: 取得した独自ドメインの管理画面から、ネームサーバーをCloudflare指定のものへ変更します。
+DNSレコードの追加:
+CloudflareのDNS設定にて、Aレコードを追加します。
+名前: api、IPv4アドレス: EC2のパブリックIPアドレス、プロキシステータス: プロキシ済み（オレンジの雲マーク） に設定。
+SSL/TLSの「フル（厳密）」化:
+Cloudflareの「SSL/TLS」メニューを開き、暗号化モードを**「フル（厳密）」**に設定します。
+これにより、フロントエンドからバックエンド（EC2）への通信が完全に暗号化（HTTPSおよびWSS）されます。
+以上の4ステップを実施いただくことで、開発したすべての防御的設計（CORS、レートリミット、IDOR対策）が本領を発揮し、本番環境として完全にセキュアな状態でサービスが公開されます。 作業中に行き詰まる箇所などがありましたら、いつでもご相談ください！
+
+10:40 AM
+11:09 AM
+Cloudflare Pagesのセットアップ画面ですね。 ご提示いただいた項目を見るに、おそらくGitHub Actions等のCI/CDツール連携、もしくはCloudflareのCLIツール（Wrangler）でのデプロイ設定画面を開かれているかと推測します。
+
+まず前提として、今回のフロントエンドはバックエンド（FastAPI）と完全に分離されているため、「静的サイト（Static Site）」としてビルドするのが最もシンプルでエラーが起きません。 そのための設定ファイル（next.config.js に output: 'export'）を先ほどこちらでプロジェクトに追加しておきました。
+
+これを踏まえ、以下のように入力・設定してください。
+
+基本設定
+プロジェクト名: sentimental-frontend （※任意の名前でOKです）
+パス (ルートディレクトリ): frontend （※ソースコードがリポジトリ直下ではなく frontend フォルダの中にあるため、必ず指定してください）
+ビルドとデプロイコマンド
+ビルドコマンド: npm run build
+（※もし package.json のインストールも聞かれる画面であれば npm install && npm run build とします）
+デプロイコマンド (または 出力ディレクトリ): out
+（※静的サイトとしてビルドすると out というフォルダに完成品が出力されるため、デプロイ対象はこの out フォルダになります）
+非本番ブランチのビルド: 空欄 または None（テスト環境を作らない場合は不要です）
+非本番ブランチのデプロイコマンド: 空欄
+APIトークン関連（GitHub Actions等で自動デプロイを組む場合のみ必要）
+もしCloudflareのダッシュボードから「Gitに接続」ボタンで直接リポジトリを連携している場合は、APIトークンは不要です。 もしGitHubの「Secrets」等に登録するよう求められている場合は以下のようにします。
+
+APIトークン: Cloudflareのダッシュボード右上「マイプロフィール」→「APIトークン」→「トークンを作成する」から「Cloudflare Pagesの編集」権限を持ったトークンを発行し、その長い文字列を貼り付けます。
+トークン名: CLOUDFLARE_API_TOKEN （任意）
+環境変数（変数名 と 変数値）
+フロントエンドが動作するために必要な環境変数です。画面上の「環境変数の追加」から以下の3つを登録してください。
+
+変数名: NEXT_PUBLIC_MAPTILER_API_KEY 変数値: （MapTilerで取得したAPIキー文字列）
+変数名: NEXT_PUBLIC_API_URL 変数値: https://api.your-domain.com （またはEC2のパブリックIP http://〇.〇.〇.〇:8000）
+変数名: NEXT_PUBLIC_WS_URL 変数値: wss://api.your-domain.com （またはEC2のパブリックIP ws://〇.〇.〇.〇:8000）
+💡 ワンポイントアドバイス もし現在見ている画面が複雑すぎる場合、Cloudflareのダッシュボードにログインし、左メニューの 「Workers & Pages」 > 青いボタンの 「アプリケーションの作成」 > 「Pages」タブ > 「Gitに接続」 の手順で進めると、トークン不要でより簡単にWeb画面だけでデプロイが完了します。（その際も、フレームワークプリセットは Next.js (Static HTML Export) を選び、ディレクトリを frontend、出力ディレクトリを out としてください）
