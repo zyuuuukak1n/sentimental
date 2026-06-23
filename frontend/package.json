@@ -10,11 +10,17 @@
     },
     "dependencies": {
         "emoji-picker-react": "^4.19.1",
+<<<<<<< HEAD
         "maplibre-gl": "^5.24.0",
         "next": "^14.2.3",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "react-map-gl": "^8.1.1"
+=======
+        "next": "^14.2.3",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
+>>>>>>> 4bd6c21fa336a9254ffddb9384948f939f65dcc4
     },
     "devDependencies": {
         "@types/node": "^20.19.41",
