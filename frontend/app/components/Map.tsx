@@ -1,7 +1,7 @@
 "use client";
 
-import maplibregl from 'maplibre-gl';
-import Map, { Marker } from 'react-map-gl';
+// ▼ 変更：v8の仕様に合わせ、maplibre専用のエンドポイントから直接インポートする
+import Map, { Marker } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 type FloatingEmoji = {
@@ -29,7 +29,7 @@ export default function EmotionMap({ floatingEmojis }: { floatingEmojis: Floatin
     return (
         <div className="absolute inset-0 z-0 pointer-events-none">
             <Map
-                mapLib={maplibregl}
+                // ▼ 変更：mapLib={maplibregl} の指定はv8では不要になったため削除
                 initialViewState={{
                     longitude: 139.767, // 東京をデフォルトの初期位置とする
                     latitude: 35.681,
