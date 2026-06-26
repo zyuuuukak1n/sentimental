@@ -44,6 +44,9 @@ export default function Home() {
     // ▼ 追加：画面に浮かぶ絵文字の配列（React State）
     // ---------------------------------------------------------
     const [floatingEmojis, setFloatingEmojis] = useState<FloatingEmoji[]>([]);
+    
+    // タブの状態管理 ('main' or 'map')
+    const [activeTab, setActiveTab] = useState<'main' | 'map'>('main');
 
     const [totalCounts, setTotalCounts] = useState<Record<string, number>>({"😡": 0, "😭": 0, "🥺": 0});
 
@@ -173,9 +176,14 @@ export default function Home() {
     // ▼ UI描画部分（レスポンシブ対応版）
     // ---------------------------------------------------------
     return (
-        <main className="min-h-[100dvh] relative flex flex-col items-center justify-start md:justify-center font-sans p-4 py-12 overflow-x-hidden overflow-y-auto bg-transparent">
-            {/* 背景の地図コンポーネント */}
-            <EmotionMap floatingEmojis={floatingEmojis} />
+        <main className="min-h-[100dvh] relative flex flex-col items-center justify-start md:justify-center font-sans p-4 pt-12 pb-24 overflow-x-hidden overflow-y-auto bg-transparent">
+            {/* 背景の地図コンポーネント（マップタブの時のみ表示） */}
+            {activeTab === 'map' && <EmotionMap floatingEmojis={floatingEmojis} coords={coords} />}
+
+            {/* メイン画面背景（メインタブの時のみ表示） */}
+            {activeTab === 'main' && (
+                <div className="absolute inset-0 bg-gray-50 -z-10" />
+            )}
 
             {/* フワフワ浮かぶ絵文字の描画エリア（位置情報がない場合のフォールバック） */}
             <div className="absolute inset-0 pointer-events-none z-0">
@@ -288,6 +296,7 @@ export default function Home() {
             </div>
 
             {/* 前面コンテンツ */}
+            {activeTab === 'main' && (
             <div className="z-10 flex flex-col items-center w-full max-w-2xl mx-auto">
                 
                 <h1 className="text-xl md:text-2xl font-bold mb-8 md:mb-12 text-gray-600 tracking-wider">
@@ -403,6 +412,25 @@ export default function Home() {
                 </div>  */}
                 {/* ========================================= */}
 
+            </div>
+            )}
+
+            {/* ボトムタブバー */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 px-4 py-3 flex justify-around items-center z-50">
+                <button 
+                    onClick={() => setActiveTab('main')}
+                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'main' ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                    <span className="text-xl">🏠</span>
+                    <span className="text-[10px] font-bold tracking-wider">MAIN</span>
+                </button>
+                <button 
+                    onClick={() => setActiveTab('map')}
+                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'map' ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                    <span className="text-xl">🗺️</span>
+                    <span className="text-[10px] font-bold tracking-wider">MAP</span>
+                </button>
             </div>
 
             {/* 認証モーダルUIと通信ロジック */}

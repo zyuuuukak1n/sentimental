@@ -12,7 +12,7 @@ type FloatingEmoji = {
     longitude?: number;
 };
 
-export default function EmotionMap({ floatingEmojis }: { floatingEmojis: FloatingEmoji[] }) {
+export default function EmotionMap({ floatingEmojis, coords }: { floatingEmojis: FloatingEmoji[], coords: {lat: number, lng: number} | null }) {
     // 【防御的設計】APIキーは環境変数から読み込む
     const mapTilerKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
 
@@ -27,17 +27,17 @@ export default function EmotionMap({ floatingEmojis }: { floatingEmojis: Floatin
     }
 
     return (
-        <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 z-0">
             <Map
                 // ▼ 変更：mapLib={maplibregl} の指定はv8では不要になったため削除
                 initialViewState={{
-                    longitude: 139.767, // 東京をデフォルトの初期位置とする
-                    latitude: 35.681,
-                    zoom: 2
+                    longitude: coords?.lng || 139.767, // 東京をデフォルトの初期位置とする
+                    latitude: coords?.lat || 35.681,
+                    zoom: coords ? 12 : 2
                 }}
                 style={{ width: '100%', height: '100%' }}
                 mapStyle={`https://api.maptiler.com/maps/streets-v2/style.json?key=${mapTilerKey}`}
-                interactive={false} // 背景としての演出なのでインタラクションはオフにする
+                interactive={true} // インタラクションを有効にする
             >
                 {floatingEmojis.map((e) => (
                     e.latitude && e.longitude ? (

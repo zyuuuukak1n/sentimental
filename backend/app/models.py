@@ -1,6 +1,6 @@
 # backend/app/models.py
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from .database import Base
@@ -16,14 +16,14 @@ class User(Base):
     provider_id = Column(String, nullable=True, unique=True)
     name = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class GuestMerge(Base):
     __tablename__ = "guest_merges"
 
     guest_id = Column(UUID(as_uuid=True), primary_key=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    merged_at = Column(DateTime, default=datetime.utcnow)
+    merged_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Reaction(Base):
     __tablename__ = "reactions"
@@ -34,4 +34,4 @@ class Reaction(Base):
     click_count = Column(Integer, nullable=False)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

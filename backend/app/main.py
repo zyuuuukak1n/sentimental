@@ -39,7 +39,7 @@ class UserCreate(BaseModel):
     password: str
     name: str
 
-class userLogin(BaseModel):
+class UserLogin(BaseModel):
     email: str
     password: str
 
@@ -250,7 +250,7 @@ async def register_user(request: Request, user_data: UserCreate):
 
 @app.post("/auth/login")
 @limiter.limit("5/minute")
-async def login_user(request: Request, user_data: userLogin):
+async def login_user(request: Request, user_data: UserLogin):
     async with AsyncSessionLocal() as db:
         # 1. メールアドレスでユーザーを検索
         stmt = select(models.User).where(models.User.email == user_data.email)
