@@ -12,18 +12,20 @@ class User(Base):
     is_guest = Column(Boolean, default=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=True)
-    auth_provider = Column(String, nullable=True) # "google", "email" 等
+    auth_provider = Column(String, nullable=True)
     provider_id = Column(String, nullable=True, unique=True)
     name = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # 【修正】DBの型に合わせてタイムゾーン情報を安全に除去してから保存する
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class GuestMerge(Base):
     __tablename__ = "guest_merges"
 
     guest_id = Column(UUID(as_uuid=True), primary_key=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    merged_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # 【修正】
+    merged_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class Reaction(Base):
     __tablename__ = "reactions"
@@ -34,4 +36,5 @@ class Reaction(Base):
     click_count = Column(Integer, nullable=False)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # 【修正】
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
